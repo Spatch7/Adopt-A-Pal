@@ -12,6 +12,16 @@ client = datastore.Client()
 
 ANIMALS = "animals"
 
+MISSING_DISPOSITIONS = {
+    "ERROR": "ANIMAL REQUIRES ATLEAST ONE DISPOSITION."
+}
+
+REQUIRED_ANIMAL_ATTRIBUTES = ["name", "species", "breed", "availability"]
+
+MISSING_ATTRIBUTES = {
+    "ERROR": "ANIMAL MISSING REQUIRED ATTRIBUTES (NAME, SPECIES, BREED, AVAILABILITY)."
+}
+
 @app.route('/')
 def root():
     # return render_template('index.html')
@@ -39,22 +49,22 @@ def animals():
         disposition_leash = request.args.get("disposition_leash")
 
         if species:
-            query.add_filter("Species", "=", species)
+            query.add_filter("species", "=", species)
 
         if breed:
-            query.add_filter("Breed", "=", breed)
+            query.add_filter("breed", "=", breed)
 
         if disposition_animals:
             if disposition_animals.lower() == "true":
-                query.add_filter("disposition", "=", "Good with other animals")
+                query.add_filter("dispositions", "=", "Good with other animals")
 
         if disposition_children:
             if disposition_children.lower() == "true":
-                query.add_filter("disposition", "=", "Good with children")
+                query.add_filter("dispositions", "=", "Good with children")
 
         if disposition_leash:
                 if disposition_leash.lower() == "true":
-                    query.add_filter("disposition", "=", "Animal must be leashed at all times")
+                    query.add_filter("dispositions", "=", "Animal must be leashed at all times")
 
         results = list(query.fetch())
 
@@ -62,8 +72,55 @@ def animals():
             e["id"] = e.key.id
         return Response(json.dumps(results, default=str), status=200,
                         mimetype='application/json')
+        
     elif request.method == "POST":
-        return jsonify(message='post')
+        content = request.get_json()
+
+        entity = datastore.Entity(key=client.key(ANIMALS))
+
+        for key in REQUIRED_ANIMAL_ATTRIBUTES:
+            if key not in content:
+                return Response(json.dumps(MISSING_ATTRIBUTES), status=400,
+                        mimetype='application/json')
+
+        animal = {
+            "name": content["name"],
+            "species": content["species"],
+            "breed": content["breed"],
+            "availability": content["availability"],
+            "added": datetime.datetime.now()
+        }
+
+        if (content["disposition_animals"] is not True) and (content["disposition_children"] is not True) and (content["disposition_leash"] is not True):
+            return Response(json.dumps(MISSING_DISPOSITIONS), status=400,
+                mimetype='application/json')
+
+        dispositions = []
+
+        if content["disposition_animals"] is True:
+            dispositions.append("Good with other animals")
+
+        if content["disposition_children"] is True:
+            dispositions.append("Good with children")
+
+        if content["disposition_leash"] is True:
+            dispositions.append("Animal must be leashed at all times")
+
+        animal.update({
+            "dispositions": dispositions
+        })
+
+        entity.update(animal)
+
+        client.put(entity)
+
+        eid = entity.key.id
+        new_animal_key = client.key(ANIMALS, int(eid))
+        res = client.get(key=new_animal_key)
+        res["id"] = int(eid)
+
+        return Response(json.dumps(res, default=str), status=201,
+                        mimetype='application/json')
     else:
         return jsonify(message='405')
 
