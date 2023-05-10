@@ -21,12 +21,12 @@ MISSING_DISPOSITIONS = {
     "ERROR": "ANIMAL REQUIRES ATLEAST ONE DISPOSITION."
 }
 
-REQUIRED_ANIMAL_ATTRIBUTES = ["name", "species", "breed", "availability", "pic_name"]
+REQUIRED_ANIMAL_ATTRIBUTES = ["name", "species", "breed", "availability"]
 
 REQUIRED_USER_ATTRIBUTES = ["firstname", "lastname", "email", "city", "phone", "pals"]
 
 MISSING_ATTRIBUTES = {
-    "ERROR": "ANIMAL MISSING REQUIRED ATTRIBUTES (NAME, SPECIES, BREED, AVAILABILITY, pic_name)."
+    "ERROR": "ANIMAL MISSING REQUIRED ATTRIBUTES (NAME, SPECIES, BREED, AVAILABILITY)."
 }
 
 ANIMAL_NOT_FOUND = {
@@ -146,12 +146,13 @@ def animals():
 
         #check for pic 1-3, if missing use placeholder.jpg, else upload photo
         random.seed()
+        key = random.randrange(9999)
         for pic in PIC_ATTRIBUTES:
             if pic not in content:
                 animal['avatars'].append(PLACEHOLDER_IMAGE)
             else:
-                prefix = random.randrange(9999999)
-                pic_url = upload_pic(content[pic], content["pic_name"] + str(prefix))
+                prefix = random.randrange(9999)
+                pic_url = upload_pic(content[pic], content["name"] + str(key) + "-" + str(prefix))
                 animal['avatars'].append(pic_url)
 
         entity.update(animal)
@@ -232,12 +233,13 @@ def animal_get_patch_delete(eid):
         #if pic not in edit request, use same photo, else upload new photo
         new_pics = [] 
         random.seed()
+        key = random.randrange(9999)
         for index, pic in enumerate(PIC_ATTRIBUTES):
             if pic not in content:
                 new_pics.append(res["avatars"][index])
             else:
-                prefix = random.randrange(9999999)
-                pic_url = upload_pic(content[pic], content["pic_name"] + str(prefix))
+                prefix = random.randrange(9999)
+                pic_url = upload_pic(content[pic], content["name"] + str(key) + "-" + str(prefix))
                 new_pics.append(pic_url)
 
         res["avatars"] = new_pics
